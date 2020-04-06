@@ -1,0 +1,91 @@
+############################## Script ME
+
+### declarar variables
+$servicio = "AdobeARMservice" # "ME" # adobe para probar
+$time = (get-date -format yyyyMMddHHmm)
+$ME_war_destino = "c:\Sript_Prueba\Archivo_New"
+$ME_war_origen = "c:\Sript_Prueba\Archivo_Old\ME_War"
+$ME_destino = "C:\Sript_Prueba\Archivo_New\ME_War"
+
+###Variables para evaluar si el servicio se detubo correctamente
+$segundos = "0"
+$minutos = "0"
+$top_minutos = 10
+
+
+### crear funciones
+
+### detener servicio
+function detener_servicio() # detiene el servicio y revisa si lo detuvo
+    {
+        Write-Host "Detener el servicio $servicio"
+        stop-service $servicio # con permisos de administrador
+
+        $service_check = Get-Service $servicio #revisar estado del servicio
+
+        while ($service_check.Status -ne 'Stopped')
+        {  
+            Stop-Service $servicio
+            write-host $service_check.status
+            write-host 'Deteniendo el servicio'
+            Start-Sleep -seconds 10  # espera 10 segundos
+            $segundos += 10          # suma 10 segundos a la variable
+            $service_check.Refresh() # vuelve a revisar el estado del servicio
+
+            if ($segundos -ge '60') # un minuto más 
+            {
+                $minutos++
+                $segundos = 0
+                Write-Host "van $minutos minutos, intentar hasta $top_minutos"
+                
+            }
+
+            if ($minutos -ge $top_minutos) #  10 minutos
+            {
+                Write-Host 'ERROR: Pasaron $top_minutos y el servicio no se detiene, time-out'
+                exit
+            }   
+        } # fin del while
+
+        Write-Host 'El servicio se detuvo'
+    }
+
+#copia archivo
+function copyfiles() 
+{
+    # revisar si la copia existe en el destino
+    $prueba = Test-Path -Path $ME_war_destino
+
+    # si existe una copia en el destino, renombrarla antes de hacer la copia, para que no se sobreescriba y se pierda ese archivo.
+    if ($prueba -match "True")
+        {
+
+        ##Rename-Item -Path "C:\Sript_Prueba\Archivo_New\ME_War" -NewName "ME_War_$time"
+        Rename-Item -Path "$ME_destino" -NewName "ME_War_$time"
+        Test-Path -Path $ME_war_destino # prueba si existe el nuevo archivo
+        echo "Arrchivo $ME_war_destino fue renombrado a $ME_war_destino_$time"
+        }
+
+            # si no existe una copia en el destino, copiar
+    Copy-Item -Path $ME_war_origen -Destination $ME_war_destino # mover archivo war
+
+}
+
+### iniciar servicio
+function iniciar_servicio() # inicia el servicio y revisa si lo inició bien
+    {
+        start-service $servicio # con permisos de administrador
+        if($running.Status -eq "Running")
+        {
+         EXIT # el script se detiene si el servicio está corriendo
+        }
+    }
+
+
+###
+### llamar funciones
+###
+
+detener_servicio
+copyfiles
+iniciar_servicio
