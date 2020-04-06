@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import os
+from sys import argv
+#
+#
+
+def createPod():        # Función para crear un pod en gcp
+##############################################################################################################
+#                                                                                                            #
+# Opciones de config                                                                                         #
+#   Opt --image                     Imagen de base que usaremos, la misma sera tomade de DockerHub.          #
+#   Opt --namespace                 NameSpace en el que se encontrara el pod y el servicio.                  #
+#   Opt --port                      Tipo de puerto en el que sera expuesto el pod.                           #
+#   Opt --replicas                  Numero de replicas creadas de este pod, por defecto es 1.                #
+#   Opt --env                       Variables de entorno que se necesiten configurar dentro del pod.         #
+#                                                                                                            #
+##############################################################################################################
+# kubectl run my-appium --image=appium/appium --namespace=testing --port=4725
+
+    name = raw_input("Ingrese el nombre del pod: ")
+    image = raw_input("Ingrese la imagen de base: ")
+    namespace = raw_input("Ingrese el NameSpace donde se alojara el pod: ")
+    port = raw_input("Ingrese el puerto donde expondras el pod: ")
+    try:
+        os.system("kubectl run " + name + " --image=" + image + " --namespace=" + namespace + " --port=" + port)
+        ##print("kubectl run " + str(name) + " --image=" + str(image) + " --namespace=" + str(namespace) + " --port=" + str(port))
+    except:
+        print("No es posible crear un pod sin los parametros: Name, Image, Namespace y Port en ese orden.")
+
+
+
+def createService():        # Función para crear/exponer un servicio en gcp
+##############################################################################################################
+#                                                                                                            #
+# Opciones de config                                                                                         #
+#   Opt --port                      Tipo de puerto en el que sera expuesto el servicio.                      #
+#   Opt --image                     Imagen de base que usaremos, la misma sera tomade de DockerHub.          #              
+#   Opt --namespace                 NameSpace en el que se encontrara el pod y el servicio.                  #
+#   Opt --port                      Tipo de puerto en el que sera expuesto el pod.                           #
+#   Opt --replicas                  Numero de replicas creadas de este pod, por defecto es 1.                #
+#   Opt --env                       Variables de entorno que se necesiten configurar dentro del pod.         #
+#                                                                                                            #
+##############################################################################################################
+    ## kubectl expose deployment/my-appium --port=4725 --protocol=TCP  --name=appium-service --type=ClusterIP
+
+    namePod = raw_input("Ingrese el nombre del pod que desea exponer: ")
+    port = raw_input("Ingrese el puerto donde expondra el servicio: ")
+    protocol = raw_input("Ingrese el tipo de protocolo que usara el servicio: ")
+    nameService = raw_input("Ingrese el nombre del servicio: ")
+    typeParam = raw_input("Ingrese el tipo de servicio que desa exponer: ")
+    try:
+        os.system("kubectl expose deployment/" + namePod + " --port=" + port + " --protocol=" + protocol + " --name=" + nameService + " --type=" +typeParam)
+    except:
+        print("No es posible crear un servicio sin los parametros: NamePod, port, protocol, nameService y type en ese orden.")
+
+
+
+def deletePod():            # Función para eliminar un pod y servicio en gcp
+##############################################################################################################
+#                                                                                                            #
+# Opciones de config                                                                                         #
+#   Opt -R                          Eliminar de forma recursiva.                                             #
+#                                                                                                            #
+##############################################################################################################
+    # kubectl delete pod app-6bbb656bc8
+    # kubectl delete pods,services -l name=myLabel
+
+    name = raw_input("Ingrese el nombre del pod que desea eliminar: ")
+    try:
+        os.system("kubectl delete pod " + name)
+    except:
+        print("No es posible eliminar un pod sin el parametro: Name.")
+
+
+
+def pushImage():            # Función para subir una imagen al container registry 
+##############################################################################################################
+#                                                                                                            #
+# Opciones de config                                                                                         #
+#   Opt -name                          nombre de la imagen a subir.                                          #
+#                                                                                                            #
+##############################################################################################################
+
+    name= raw_input("Ingrese el nombre de la imagen que desea subir: ")
+    try:
+        push_image("docker push " + name)
+    except:
+        print("No es posible subir la imagen al registry sin el parametro: Name")
+
+
+
+def pullImage():            # Función para subir una imagen al container registry 
+##############################################################################################################
+#                                                                                                            #
+# Opciones de config                                                                                         #
+#   Opt -name                          nombre de la imagen a bajar.                                          #
+#                                                                                                            #
+##############################################################################################################
+
+    name= raw_input("Ingrese el nombre de la imagen que desea bajar: ")
+    try:
+        pull_image("docker pull "+ name)
+    except:
+        print("No es posible bajar la imagen del registry sin el parametro: Name")
+
+
+##############################################################################################################
+#                                                                                                            #
+# Seleccion de función                                                                                       #
+#                                                                                                            #
+##############################################################################################################
+  
+try:
+    if len(argv) <5:
+        if argv[1] == "--createPod":
+            createPod()
+        if argv[1] == "--createService":
+            createService()
+        if argv[1] == "--deletePod":
+            deletePod()
+        if argv[1] == "--pushImage":
+            pushImage()
+        if argv[1] == "--pullImage":
+            pullImage()
+    else:
+        raise Exception("El script requiere y admite solo un parametro (--createPod / --createService / --delete / --pushImage / --pullImage) a la vez")
+except Exception as e:
+    print(e)
