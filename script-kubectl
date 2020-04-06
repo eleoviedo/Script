@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 from sys import argv
-#
-#
+
 
 def createPod():        # Función para crear un pod en gcp
 ##############################################################################################################
@@ -63,7 +62,6 @@ def deletePod():            # Función para eliminar un pod y servicio en gcp
 #   Opt -R                          Eliminar de forma recursiva.                                             #
 #                                                                                                            #
 ##############################################################################################################
-    # kubectl delete pod app-6bbb656bc8
     # kubectl delete pods,services -l name=myLabel
 
     name = raw_input("Ingrese el nombre del pod que desea eliminar: ")
@@ -103,6 +101,7 @@ def pullImage():            # Función para subir una imagen al container regist
         pull_image("docker pull "+ name)
     except:
         print("No es posible bajar la imagen del registry sin el parametro: Name")
+
 
 
 ##############################################################################################################
