@@ -1,0 +1,171 @@
+############################## Script BackUp N° de archivos,  Elein Oviedo
+
+### declarar variables
+$Backup = "C:\Sript_Prueba\BackUp" ### Variable que guarda el respaldo de la variable $Carpeta_origen
+$Carpeta_origen = "C:\Sript_Prueba\Origin" ### Variable que guarda los archivos de la variable $Carpeta_destino
+$Carpeta_destino = "C:\Sript_Prueba\New" ### Variable que guarda los archivos nuevos del servicio
+$time = (get-date -format yyyyMMddHHmm)
+##$Carpeta_prueba = "C:\Sript_Prueba\Prueba"
+$servicio = "AdobeARMservice" # adobe para probar
+
+### Variables para evaluar si el servicio se detubo correctamente
+$segundos = "0"
+$minutos = "0"
+$top_minutos = 10
+
+### Variables para remover la carpeta ME y Catalina
+$RemoveMe = "d:\Aplicacionesj2ee\Instancias\ME\webapps\ME" ##"C:\Repo\Nueva carpeta\Nueva carpeta\Script" ##d:\Aplicacionesj2ee\Instancias\ME\webapps\ME
+$RemoveCatalina = "d:\Aplicacionesj2ee\Instancias\ME\work\Catalina\localhost\ME"  ##"C:\Script\Nueva carpeta\Script" ##d:\Aplicacionesj2ee\Instancias\ME\work\Catalina\localhost\ME
+
+
+
+### guarda lista de archivos a renombrar en la carpeta de origen
+$archivos = Get-ChildItem $Carpeta_origen -filter *.*
+$cant = (Get-ChildItem $Carpeta_origen -filter *.*).count
+
+### guarda lista de archivos a renombrar en la carpeta de destino
+$files = Get-ChildItem $Carpeta_destino -filter *.*
+$cont = (Get-ChildItem $Carpeta_destino -filter *.*).count
+
+
+### Creacion de las funciones
+### detener servicio
+function detener_servicio() # detiene el servicio y revisa si lo detuvo
+    {
+        Write-Host "Detener el servicio $servicio"
+        stop-service $servicio # con permisos de administrador
+
+        $service_check = Get-Service $servicio #revisar estado del servicio
+
+        while ($service_check.Status -ne 'Stopped')
+        {  
+            Stop-Service $servicio
+            write-host $service_check.status
+            write-host 'Deteniendo el servicio'
+            Start-Sleep -seconds 10  # espera 10 segundos
+            $segundos += 10          # suma 10 segundos a la variable
+            $service_check.Refresh() # vuelve a revisar el estado del servicio
+
+            if ($segundos -ge '60') # un minuto más 
+            {
+                $minutos++
+                $segundos = 0
+                Write-Host "van $minutos minutos, intentar hasta $top_minutos"
+                
+            }
+
+            if ($minutos -ge $top_minutos) #  10 minutos
+            {
+                Write-Host 'ERROR: Pasaron $top_minutos y el servicio no se detiene, time-out'
+                exit
+            }   
+        } # fin del while
+
+        Write-Host 'El servicio se detuvo'
+    }
+
+### comparacion de los archivos existentes en la carpeta de origen y  de destino
+function viewfiles()
+    {
+        Get-ChildItem -Path $Carpeta_origen -Force -Recurse
+        Get-ChildItem -Path $Backup -Force -Recurse
+    }
+
+### bucle para validar existencia de los archivos en la carpeta de destino, copia y renombrar
+function backupfiles() 
+{
+    if ($cant -ge 1) #toma bkp de .bat y copia
+    {
+        ForEach ($arch in $archivos)
+        {
+            $bat = $arch.Name
+        $valor = (test-path $BackUp"\"$bat)
+            if ($valor) 
+            {
+                renamefiles ### llamada a la funcion renamefile para renombrar los archivos ya existen en la carpeta de destino
+                copyfiles ### llamada a la funcion copyfile para copiar los archivos de la carpeta de origen
+                echo "Revise y existen los archivos en la carpeta de destino" 
+            }
+            else 
+            {
+                copyfiles
+                echo "Revise no existen los archivos en la carpeta de destino"
+            }
+        }
+    }
+}
+
+### renombra las carpetas y archivos existentes y le agre la fecha y hora del despliegue
+function renamefiles() 
+{
+    Rename-Item -Path $BackUp"\"$bat -NewName "$bat$time"
+}
+
+### copia de todas las carpetas y archivos que se encuentren en la carpeta de origen a la carpeta destino
+function copyfiles()
+{
+    Copy-Item -Path $Carpeta_origen"\"$bat -Destination $BackUp -Recurse -force
+}
+
+### comparacion de los archivos existentes en la carpeta de origen y  de destino
+function viewfilesNew()
+    {
+        Get-ChildItem -Path $Carpeta_destino -Force -Recurse
+        Get-ChildItem -Path $Carpeta_origen -Force -Recurse
+    }
+
+##### Copiado de archivos de la carpeta New a la carpeta Origin
+function reemplazoArchivos()
+{
+     if ($cont -ge 1) #toma bkp de .bat y copia
+    {
+        ForEach ($fil in $files)
+        {
+            $bat = $fil.Name
+        $valor = (test-path $Carpeta_origen"\"$bat)
+            if ($valor) 
+            {
+                Copy-Item -Path $Carpeta_destino"\"$bat -Destination $Carpeta_origen -Recurse -force
+                echo "Revise y existen los archivos en la carpeta de destino" 
+            }
+            else 
+            {
+                Copy-Item -Path $Carpeta_destino"\"$bat -Destination $Carpeta_origen -Recurse -force
+                echo "Revise no existen los archivos en la carpeta de destino"
+            }
+        }
+    }
+
+}
+
+### Remover directorios Catalina y Me
+# todos los archivos y carpetas
+function removercarpetas()
+    {
+        Remove-Item -Path $RemoveMe -recurse
+        Remove-Item -Path $RemoveCatalina -recurse
+    }
+
+### iniciar servicio
+function iniciar_servicio() # inicia el servicio y revisa si lo inició bien
+    {
+        start-service $servicio # con permisos de administrador
+        if($running.Status -eq "Running")
+        {
+         EXIT # el script se detiene si el servicio está corriendo
+        }
+    }
+
+###
+### llamar funciones
+###
+detener_servicio
+viewfiles
+backupfiles
+
+## Funcion para borrar directorios
+
+viewfilesNew
+reemplazoArchivos
+removercarpetas
+iniciar_servicio
